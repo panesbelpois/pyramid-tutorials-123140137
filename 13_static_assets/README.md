@@ -1,4 +1,4 @@
-# Pyramid Jinja2 Templating Tutorial
+# 13: Pyramid Jinja2 Templating Tutorial
 
 ## Deskripsi
 
@@ -365,9 +365,3 @@ def main(global_config, **settings):
 | **Context Manager** | Clean, pythonic | Hanya untuk Python 3.x |
 
 **Rekomendasi:** Gunakan **Declarative Configuration (INI file)** untuk production karena memisahkan konfigurasi dari code, memudahkan deployment di berbagai environment.
-
----
-
-## Kesimpulan
-
-Tutorial ini menunjukkan bahwa Pyramid sangat fleksibel dalam memilih sistem templating. Dengan menambahkan pyramid_jinja2 sebagai add-on, kita dapat dengan mudah mengganti Chameleon dengan Jinja2 hanya dengan beberapa perubahan kecil. Proses ini mendemonstrasikan kesederhanaan dan modularitas dari Pyramid framework.
