@@ -179,11 +179,11 @@ Keuntungan:
 
 ---
 
-## Jawaban Extra Credit
+## Extra Credit
 
 ### 1. **Why could our template do `${view.full_name}` and not have to do `${view.full_name()}`?**
 
-**Jawaban**: Python properties adalah descriptors yang secara otomatis memanggil method getter ketika atribut diakses. Ketika template engine (Chameleon dalam hal ini) mengakses `view.full_name`, Python secara otomatis memanggil property getter `full_name(self)` tanpa memerlukan explicit function call.
+Python properties adalah descriptors yang secara otomatis memanggil method getter ketika atribut diakses. Ketika template engine (Chameleon dalam hal ini) mengakses `view.full_name`, Python secara otomatis memanggil property getter `full_name(self)` tanpa memerlukan explicit function call.
 
 Chameleon smart enough untuk mendeteksi dan memanggil callables. Karena `@property` membuat method terlihat seperti atribut biasa, akses tanpa `()` sudah cukup.
 
@@ -202,7 +202,7 @@ ${view.full_name()} # ✗ Akan error - property bukan callable
 
 ### 2. **The edit and delete views both receive POST requests. Why does the edit view configuration not catch the POST used by delete?**
 
-**Jawaban**: Pyramid menggunakan **specificity-based matching** untuk view predicates. View dengan predicates lebih spesifik memiliki prioritas lebih tinggi daripada yang lebih umum.
+Pyramid menggunakan **specificity-based matching** untuk view predicates. View dengan predicates lebih spesifik memiliki prioritas lebih tinggi daripada yang lebih umum.
 
 ```python
 @view_config(request_method='POST', renderer='edit.pt')
@@ -227,7 +227,7 @@ Tanpa parameter `request_param`, `edit()` akan intercept SEMUA POST requests. Pa
 
 ### 3. **We used Python `@property` on full_name. If we reference this many times in a template or view code, it would re-compute this every time. Does Pyramid provide something that will cache the initial computation on a property?**
 
-**Jawaban**: Pyramid sendiri tidak menyediakan built-in caching untuk properties, tetapi ada beberapa solusi:
+Pyramid sendiri tidak menyediakan built-in caching untuk properties, tetapi ada beberapa solusi:
 
 #### **A. Menggunakan `functools.cached_property` (Python 3.8+)**
 
@@ -281,7 +281,7 @@ class TutorialViews:
 
 ### 4. **Can you associate more than one route with the same view?**
 
-**Jawaban**: Ya, ada beberapa cara:
+Ada beberapa cara:
 
 #### **A. Dekorasi Multiple dengan `@view_config`**
 
@@ -328,7 +328,7 @@ Semua URL akan di-route ke view yang sama.
 
 ### 5. **There is also a `request.route_path` API. How does this differ from `request.route_url`?**
 
-**Jawaban**: Kedua API menghasilkan URL/path untuk named routes, tapi dengan perbedaan:
+Kedua API menghasilkan URL/path untuk named routes, tapi dengan perbedaan:
 
 | Fitur | `route_url()` | `route_path()` |
 |-------|-------------|-----------------|
@@ -367,17 +367,3 @@ def edit(self):
 **Rekomendasi**: 
 - Gunakan `route_path()` dalam HTML templates untuk relative links
 - Gunakan `route_url()` untuk HTTP redirects, API responses, dan social media meta tags
-
----
-
-## Kesimpulan
-
-Tutorial ini mendemonstrasikan power dari view classes dalam Pyramid:
-
-1. ✅ **Organisasi**: Logically related views dalam satu kelas
-2. ✅ **DRY**: `@view_defaults` menghilangkan duplikasi konfigurasi
-3. ✅ **Flexibility**: View predicates memungkinkan sophisticated routing logic
-4. ✅ **Code Reuse**: Shared state dan properties meningkatkan maintainability
-5. ✅ **Dynamic URLs**: Route generation yang fleksibel dan maintainable
-
-Dengan memahami konsep-konsep ini, Anda dapat membangun aplikasi Pyramid yang lebih scalable dan well-organized.
