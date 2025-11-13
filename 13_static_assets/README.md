@@ -1,14 +1,14 @@
-# 13: Pyramid Jinja2 Templating Tutorial
+# 13: Pyramid Static Assets Tutorial (CSS/JS/Images)
 
 ## Deskripsi
 
-Tutorial ini mendemonstrasikan bagaimana mengintegrasikan **Jinja2** sebagai sistem templating dalam aplikasi Pyramid. Jinja2 adalah template engine yang populer dan digunakan oleh Flask, serta dimodelkan berdasarkan Django's templates. Melalui tutorial ini, kita akan belajar menggunakan `pyramid_jinja2`, sebuah add-on Pyramid yang memungkinkan Jinja2 berfungsi sebagai renderer dalam aplikasi Pyramid.
+Tutorial ini menunjukkan cara mengelola dan melayani **static assets** (CSS, JavaScript, dan gambar) dalam aplikasi Pyramid. Kami akan belajar bagaimana mengonfigurasi direktori static assets, menghubungkan file CSS ke template, dan menggunakan Pyramid's helper functions untuk menghasilkan URL yang fleksibel ke static files. Ini adalah aspek penting dari pengembangan web modern yang memisahkan concerns antara markup dan styling/scripting.
 
 ### Objektif Pembelajaran
-- Menunjukkan dukungan Pyramid terhadap berbagai sistem templating
-- Mempelajari cara instalasi Pyramid add-ons
-- Memahami integrasi Jinja2 dengan Pyramid
-- Membandingkan sintaks templating Jinja2 dengan Chameleon
+- Mempublikasikan direktori static assets pada suatu URL
+- Menggunakan Pyramid untuk membantu generate URLs ke files dalam direktori static
+- Memahami konsep asset management dalam web applications
+- Mempelajari best practices dalam linking static resources
 
 ---
 
@@ -18,350 +18,385 @@ Tutorial ini mendemonstrasikan bagaimana mengintegrasikan **Jinja2** sebagai sis
 - Python 3.x
 - Virtual Environment (venv)
 - pip (Python package installer)
+- Pyramid framework sudah terinstal
 
 ### Langkah-Langkah Instalasi
 
 #### 1. Setup Proyek
 ```bash
-# Buat direktori proyek
+# Copy dari step view_classes
 cd /path/to/projects
-cp -r view_classes jinja2
-cd jinja2
-```
+cp -r view_classes static_assets
+cd static_assets
 
-#### 2. Update Dependensi di `setup.py`
-Tambahkan `pyramid_jinja2` ke dalam daftar dependencies:
-
-```python
-from setuptools import setup
-
-requires = [
-    'pyramid',
-    'pyramid_chameleon',
-    'pyramid_jinja2',  # Tambahan untuk Jinja2
-    'waitress',
-]
-
-dev_requires = [
-    'pyramid_debugtoolbar',
-    'pytest',
-    'webtest',
-]
-
-setup(
-    name='tutorial',
-    install_requires=requires,
-    extras_require={
-        'dev': dev_requires,
-    },
-    entry_points={
-        'paste.app_factory': [
-            'main = tutorial:main'
-        ],
-    },
-)
-```
-
-#### 3. Install Proyek dan Dependensi
-```bash
 # Aktifkan virtual environment
 source $VENV/bin/activate  # Linux/macOS
 # atau
 $VENV\Scripts\activate  # Windows
 
-# Install proyek dengan dependencies
+# Install dependencies
 pip install -e .
 ```
 
-#### 4. Konfigurasi di `tutorial/__init__.py`
+#### 2. Konfigurasi Static View di `tutorial/__init__.py`
+Tambahkan `config.add_static_view()` untuk mendaftarkan direktori static:
+
 ```python
 from pyramid.config import Configurator
 
 def main(global_config, **settings):
     config = Configurator(settings=settings)
-    config.include('pyramid_jinja2')  # Aktifkan Jinja2
+    config.include('pyramid_chameleon')
     config.add_route('home', '/')
     config.add_route('hello', '/howdy')
+    
+    # Tambahkan static view - map /static/ URLs ke tutorial:static directory
+    config.add_static_view(name='static', path='tutorial:static')
+    
     config.scan('.views')
     return config.make_wsgi_app()
 ```
 
-#### 5. Update Views di `tutorial/views.py`
-```python
-from pyramid.view import view_config, view_defaults
+**Penjelasan parameter:**
+- `name='static'`: Nama prefix URL untuk static assets
+- `path='tutorial:static'`: Path ke direktori static relative ke package
 
-@view_defaults(renderer='home.jinja2')  # Ganti ke extension Jinja2
-class TutorialViews:
-    def __init__(self, request):
-        self.request = request
+#### 3. Update Template di `tutorial/home.pt`
+Tambahkan link CSS dan gunakan `request.static_url()`:
 
-    @view_config(route_name='home')
-    def home(self):
-        return {'name': 'Home View'}
-
-    @view_config(route_name='hello')
-    def hello(self):
-        return {'name': 'Hello View'}
-```
-
-#### 6. Buat Template `tutorial/home.jinja2`
 ```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Quick Tutorial: {{ name }}</title>
+    <title>Quick Tutorial: ${name}</title>
+    <link rel="stylesheet"
+          href="${request.static_url('tutorial:static/app.css') }"/>
 </head>
 <body>
-<h1>Hi {{ name }}</h1>
+<h1>Hi ${name}</h1>
 </body>
 </html>
 ```
 
-#### 7. Jalankan Tests
+**Penjelasan:**
+- `request.static_url()`: Helper function untuk generate full URL ke static assets
+- Parameter mengikuti format yang sama dengan `path` di `config.add_static_view()`
+
+#### 4. Buat File CSS di `tutorial/static/app.css`
+```css
+body {
+    margin: 2em;
+    font-family: sans-serif;
+}
+```
+
+#### 5. Tambah Test Untuk Static Assets di `tutorial/tests.py`
+```python
+def test_css(self):
+    res = self.testapp.get('/static/app.css', status=200)
+    self.assertIn(b'body', res.body)
+```
+
+Test ini memverifikasi bahwa:
+- File CSS dapat diakses melalui URL `/static/app.css`
+- Response status adalah 200 (OK)
+- Content berisi `body` CSS selector
+
+#### 6. Jalankan Tests
 ```bash
 pytest tutorial/tests.py -q
 ```
 
 Output yang diharapkan:
 ```
-....
-4 passed in 0.40 seconds
+.....
+5 passed in 0.50 seconds
 ```
 
-#### 8. Jalankan Aplikasi
+#### 7. Jalankan Aplikasi
 ```bash
 pserve development.ini --reload
 ```
 
 Akses aplikasi di: `http://localhost:6543/`
 
+Anda akan melihat halaman dengan styling yang diaplikasikan dari `app.css`.
+
 ---
 
 ## Analisis
 
-### Integrasi Pyramid Add-on
+### Konfigurasi Static Assets
 
-Proses integrasi Pyramid add-on sangat sederhana dan mengikuti pola standar:
+Pyramid membutuhkan explicit configuration untuk melayani static files. Ini dilakukan menggunakan `config.add_static_view()`:
 
-1. **Instalasi Package**: Menggunakan tools Python standard (`pip`) untuk menginstal add-on package ke dalam Python virtual environment
-2. **Registrasi dengan Configurator**: Menggunakan `config.include()` untuk memberitahu Pyramid's configurator agar menjalankan setup code dari add-on
-3. **Konfigurasi Renderer**: Setup code dari pyramid_jinja2 mendaftarkan renderer baru yang mengenali file extension `.jinja2`
-
-### Perubahan pada View Code
-
-View code tetap relatif konsisten dengan struktur sebelumnya. Perubahan utama adalah:
-- Mengganti file extension renderer dari `.pt` (Chameleon) menjadi `.jinja2` (Jinja2)
-- Tidak ada perubahan pada logika view atau return values
-
-### Perbandingan Jinja2 vs Chameleon
-
-Dari segi syntax dasar untuk insersi variabel, keduanya sangat mirip:
-
-**Chameleon (template.pt):**
-```html
-<h1>Hi ${name}</h1>
+```python
+config.add_static_view(name='static', path='tutorial:static')
 ```
 
-**Jinja2 (template.jinja2):**
-```html
-<h1>Hi {{ name }}</h1>
+**Apa yang terjadi:**
+1. **Routing**: Semua request ke `/static/*` akan di-handle oleh static view
+2. **Mapping**: Path yang di-request di-map ke direktori `tutorial:static` di file system
+3. **Serving**: Pyramid akan mengambil file dari direktori tersebut dan mengirimnya ke client
+
+### Struktur Direktori
+```
+tutorial/
+├── __init__.py
+├── app.py
+├── home.pt
+├── views.py
+├── tests.py
+└── static/           # Direktori untuk static assets
+    └── app.css       # CSS file
 ```
 
-Perbedaan utama hanya pada delimiter syntax. Jinja2 menggunakan double curly braces `{{ }}` sementara Chameleon menggunakan dollar-sign notation `${}`.
+### request.static_url() vs Hard-coded URLs
 
-### Keuntungan Menggunakan Jinja2
+#### Hard-coded URL (Tidak Recommended):
+```html
+<link rel="stylesheet" href="/static/app.css"/>
+```
 
-- **Familiar untuk Flask developers**: Jinja2 adalah default template engine di Flask
-- **Django-inspired**: Konsep dan syntax mirip dengan Django templates
-- **Fleksibel**: Mendukung fitur-fitur template engine yang advanced seperti macros, filters, dan inheritance
-- **Multi-framework support**: Tidak terikat pada satu framework saja
+**Masalah:**
+- Brittle: Jika struktur berubah, semua URLs harus diupdate manual
+- Tidak fleksibel: Sulit untuk deployment di sub-path
+- Risk of bugs: Mudah terjadi typo atau miss saat refactor
+
+#### Menggunakan request.static_url() (Recommended):
+```html
+<link rel="stylesheet" href="${request.static_url('tutorial:static/app.css')}"/>
+```
+
+**Keuntungan:**
+- **Fleksibel**: Perubahan di config otomatis tercermin di semua templates
+- **Maintainable**: Single source of truth untuk static path configuration
+- **Refactoring-friendly**: Bisa move static assets tanpa mengubah templates
+- **DRY Principle**: Tidak perlu hardcode path di multiple places
+
+### Asset Path Notation
+
+Pyramid menggunakan **asset specification** format:
+```
+package_name:relative/path/to/asset
+```
+
+Contoh:
+```python
+# File CSS di tutorial/static/app.css
+'tutorial:static/app.css'
+
+# JavaScript di tutorial/static/js/main.js
+'tutorial:static/js/main.js'
+
+# Image di tutorial/static/images/logo.png
+'tutorial:static/images/logo.png'
+```
+
+### Serving Static Files dalam Development vs Production
+
+#### Development (pserve dengan --reload):
+- Pyramid secara otomatis serve static files
+- Hot-reload enabled
+
+#### Production:
+- Biasanya static files dilayani oleh web server (nginx, Apache)
+- Pyramid bisa dikonfigurasi untuk tidak serve static files
+- Lebih performant dan scalable
 
 ---
 
 ## Extra Credit - Jawaban
 
-### Pertanyaan 1: Cara Lain untuk Mendeklarasikan Dependensi
+### Pertanyaan: `request.static_path()` vs `request.static_url()`
 
-**Pertanyaan:** "Proyek kami sekarang bergantung pada pyramid_jinja2. Kami menginstal dependensi tersebut secara manual. Apa cara lain untuk membuat asosiasi?"
+**Pertanyaan:** "Ada juga API `request.static_path`. Bagaimana ini berbeda dari `request.static_url`?"
 
 **Jawaban:**
 
-Ada beberapa cara lain untuk mendeklarasikan dependensi pyramid_jinja2:
+Kedua API ini digunakan untuk generate path ke static assets, tetapi dengan output yang berbeda:
 
-#### **1. Via `setup.cfg` (Setup Configuration File)**
-```ini
-[metadata]
-name = tutorial
-version = 1.0
+#### **1. `request.static_url()` - Generate Full URL**
 
-[options]
-install_requires =
-    pyramid
-    pyramid_chameleon
-    pyramid_jinja2
-    waitress
+**Definisi:** Mengembalikan URL lengkap yang dapat langsung digunakan di browser (dengan protocol dan domain).
 
-[options.extras_require]
-dev =
-    pyramid_debugtoolbar
-    pytest
-    webtest
-
-[options.entry_points]
-paste.app_factory =
-    main = tutorial:main
+**Sintaks:**
+```python
+request.static_url('tutorial:static/app.css')
 ```
 
-#### **2. Via `pyproject.toml` (Modern Python Packaging - PEP 517/518)**
-```toml
-[build-system]
-requires = ["setuptools>=45", "wheel"]
-build-backend = "setuptools.build_meta"
-
-[project]
-name = "tutorial"
-version = "1.0.0"
-dependencies = [
-    "pyramid",
-    "pyramid_chameleon",
-    "pyramid_jinja2",
-    "waitress",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pyramid_debugtoolbar",
-    "pytest",
-    "webtest",
-]
-
-[project.entry-points."paste.app_factory"]
-main = "tutorial:main"
+**Output:**
+```
+http://localhost:6543/static/app.css
 ```
 
-#### **3. Via `requirements.txt` (Manual Management)**
-```
-pyramid
-pyramid_chameleon
-pyramid_jinja2
-waitress
-```
-Kemudian install dengan:
-```bash
-pip install -r requirements.txt
+**Penggunaan:**
+```html
+<!-- HTML href attribute memerlukan full URL -->
+<link rel="stylesheet" href="${request.static_url('tutorial:static/app.css')}"/>
+
+<!-- atau di script -->
+<script src="${request.static_url('tutorial:static/js/main.js')}"></script>
+
+<!-- atau gambar -->
+<img src="${request.static_url('tutorial:static/images/logo.png')}" alt="Logo"/>
 ```
 
-#### **4. Via Environment-specific Files**
-```
-requirements-base.txt (production dependencies)
-requirements-dev.txt (development dependencies)
-requirements-test.txt (testing dependencies)
+**Kegunaan:**
+- HTML templates (href, src)
+- Ketika memerlukan full URL lengkap dengan protocol dan domain
+- Ketika URL akan digunakan di context yang berbeda (AJAX calls, redirects)
+
+#### **2. `request.static_path()` - Generate Relative Path**
+
+**Definisi:** Mengembalikan hanya path (tanpa protocol dan domain), relative ke application root.
+
+**Sintaks:**
+```python
+request.static_path('tutorial:static/app.css')
 ```
 
-**Rekomendasi Modern:** Gunakan `pyproject.toml` karena ini adalah standar modern Python packaging (PEP 517/518/621) yang lebih fleksibel dan maintainable.
+**Output:**
+```
+/static/app.css
+```
+
+**Penggunaan:**
+```python
+# Di dalam view function
+from pyramid.response import Response
+
+def my_view(request):
+    css_path = request.static_path('tutorial:static/app.css')
+    # css_path = '/static/app.css'
+    return Response(css_path)
+
+# Atau di template ketika perlu hanya path
+def get_asset_path(request):
+    return request.static_path('tutorial:static/style.css')
+    # Returns: '/static/style.css'
+```
+
+**Kegunaan:**
+- Ketika hanya memerlukan relative path saja
+- Menggunakan path di Python code untuk manipulasi
+- Ketika sudah tahu domain/protocol-nya
+- URL rewriting atau proxy scenarios
+
+#### **Perbandingan Detail**
+
+| Aspek | `static_url()` | `static_path()` |
+|-------|---|---|
+| **Output** | Full URL: `http://localhost:6543/static/app.css` | Path saja: `/static/app.css` |
+| **Includes** | Protocol, domain, port, path | Hanya path |
+| **Use Case** | HTML attributes (href, src), links | Path manipulation, redirects |
+| **Template Usage** | Recommended | Jarang |
+| **Performance** | Sedikit lebih heavy | Lebih lightweight |
+| **Cross-domain** | Bisa dengan config | Tidak applicable |
+
+#### **Contoh Praktis Perbandingan**
+
+```python
+# View function
+from pyramid.view import view_config
+
+@view_config(route_name='asset_info')
+def asset_info(request):
+    # Menggunakan static_url()
+    full_url = request.static_url('tutorial:static/app.css')
+    # Result: 'http://localhost:6543/static/app.css'
+    
+    # Menggunakan static_path()
+    relative_path = request.static_path('tutorial:static/app.css')
+    # Result: '/static/app.css'
+    
+    return {
+        'full_url': full_url,
+        'path': relative_path
+    }
+```
+
+#### **Template Example**
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- static_url() untuk HTML attributes -->
+    <link rel="stylesheet" href="${request.static_url('tutorial:static/app.css')}"/>
+    <script src="${request.static_url('tutorial:static/js/main.js')}"></script>
+</head>
+<body>
+    <img src="${request.static_url('tutorial:static/images/logo.png')}" alt="Logo"/>
+    
+    <!-- Jarang menggunakan static_path() di template, tapi bisa jika perlu -->
+    <!-- Path value: ${request.static_path('tutorial:static/app.css')} -->
+</body>
+</html>
+```
+
+#### **Kapan Menggunakan Masing-masing**
+
+**Gunakan `static_url()`:**
+- ✅ HTML `href` dan `src` attributes
+- ✅ AJAX requests ke static files
+- ✅ Ketika perlu full URL dengan scheme
+- ✅ External links atau API responses
+- ✅ Untuk umum dan safe, gunakan ini
+
+**Gunakan `static_path()`:**
+- ✅ Manipulasi path di Python code
+- ✅ Ketika sudah tahu domainnya
+- ✅ Path construction atau joining
+- ✅ Ketika perlu hanya relative path
+- ✅ Performance-critical scenarios (jarang diperlukan)
+
+#### **Best Practice Rekomendasi**
+
+**Gunakan `request.static_url()` sebagai default untuk HTML templates.** Ini adalah yang paling aman dan fleksibel. `request.static_path()` lebih jarang digunakan dan lebih untuk kasus-kasus spesifik di backend code.
+
+```python
+# RECOMMENDED untuk templates
+href="${request.static_url('tutorial:static/app.css')}"
+
+# Jarang digunakan
+path = "${request.static_path('tutorial:static/app.css')}"
+```
 
 ---
 
-### Pertanyaan 2: Cara Lain untuk Include Konfigurasi
+## Best Practices
 
-**Pertanyaan:** "Kami menggunakan `config.include` yang merupakan imperative configuration untuk mendapatkan Configurator memuat konfigurasi pyramid_jinja2. Apa cara lain untuk mengincludenya ke dalam config?"
-
-**Jawaban:**
-
-Ada beberapa alternatif untuk menginclude konfigurasi pyramid_jinja2:
-
-#### **1. Via Declarative Configuration (INI file)**
-Edit `development.ini`:
-```ini
-[app:main]
-use = egg:tutorial
-pyramid.includes =
-    pyramid_jinja2
+### 1. Struktur Direktori Static Assets
+```
+tutorial/static/
+├── css/
+│   ├── app.css
+│   └── responsive.css
+├── js/
+│   ├── main.js
+│   └── utils.js
+└── images/
+    ├── logo.png
+    └── favicon.ico
 ```
 
-Kemudian di `tutorial/__init__.py`:
-```python
-from pyramid.config import Configurator
+### 2. Gunakan `request.static_url()` di Templates
+```html
+<!-- Good -->
+<link rel="stylesheet" href="${request.static_url('tutorial:static/css/app.css')}"/>
 
-def main(global_config, **settings):
-    config = Configurator(settings=settings)
-    # config.include('pyramid_jinja2')  # Dihapus
-    config.add_route('home', '/')
-    config.add_route('hello', '/howdy')
-    config.scan('.views')
-    return config.make_wsgi_app()
+<!-- Bad - hard-coded -->
+<link rel="stylesheet" href="/static/css/app.css"/>
 ```
 
-#### **2. Via Entry Points (Automatic Discovery)**
-Di `setup.py`, tambahkan entry point untuk pyramid plugins:
-```python
-setup(
-    name='tutorial',
-    install_requires=requires,
-    extras_require={'dev': dev_requires},
-    entry_points={
-        'paste.app_factory': [
-            'main = tutorial:main'
-        ],
-        'pyramid.includes': [  # Automatic loading
-            'pyramid_jinja2',
-        ]
-    },
-)
+### 3. Cache Busting untuk Production
+Tambahkan query parameter untuk force-refresh cache:
+```html
+<link rel="stylesheet" href="${request.static_url('tutorial:static/css/app.css')}?v=1.0"/>
 ```
 
-Keuntungan: Jinja2 akan otomatis di-load tanpa perlu `config.include()` atau declarative config.
-
-#### **3. Via Pyramid Configurator `__enter__`/`__exit__` (Context Manager)**
-```python
-from pyramid.config import Configurator
-
-def main(global_config, **settings):
-    with Configurator(settings=settings) as config:
-        config.include('pyramid_jinja2')
-        config.add_route('home', '/')
-        config.add_route('hello', '/howdy')
-        config.scan('.views')
-        return config.make_wsgi_app()
-```
-
-#### **4. Via Action Chain (Multiple Includes)**
-```python
-def main(global_config, **settings):
-    config = Configurator(settings=settings)
-    
-    # Include multiple add-ons dalam satu chain
-    config.include('pyramid_jinja2')
-    config.include('pyramid_chameleon')
-    
-    config.add_route('home', '/')
-    config.add_route('hello', '/howdy')
-    config.scan('.views')
-    return config.make_wsgi_app()
-```
-
-#### **5. Via Configurator include dengan Callable**
-```python
-def include_jinja2(config):
-    """Custom inclusion function"""
-    config.include('pyramid_jinja2')
-
-def main(global_config, **settings):
-    config = Configurator(settings=settings)
-    config.include(include_jinja2)
-    config.add_route('home', '/')
-    config.add_route('hello', '/howdy')
-    config.scan('.views')
-    return config.make_wsgi_app()
-```
-
-**Perbandingan Metode:**
-
-| Metode | Kelebihan | Kekurangan |
-|--------|-----------|-----------|
-| **Imperative (config.include)** | Eksplisit, mudah dikontrol | Harus di-code di setiap proyek |
-| **Declarative (INI)** | Fleksibel, bisa diubah tanpa restart | Lebih kompleks untuk logika conditional |
-| **Entry Points** | Otomatis, zero-config | Kurang eksplisit |
-| **Context Manager** | Clean, pythonic | Hanya untuk Python 3.x |
-
-**Rekomendasi:** Gunakan **Declarative Configuration (INI file)** untuk production karena memisahkan konfigurasi dari code, memudahkan deployment di berbagai environment.
+### 4. Asset Organization
+- Organize by type (css, js, images)
+- Use descriptive filenames
+- Minify untuk production

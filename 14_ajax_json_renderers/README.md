@@ -196,15 +196,3 @@ Daripada membuat route terpisah, bisa menggunakan view predicate:
 def hello(self):
     return {'name': 'Hello View'}
 ```
-
----
-
-## Kesimpulan
-
-Tutorial ini menunjukkan bagaimana Pyramid mempermudah development AJAX modern dengan:
-1. JSON renderer built-in
-2. Flexibility dalam stacking decorators
-3. Data-oriented view layer untuk better testability
-4. Separation of concerns antara view logic dan rendering
-
-Dengan pemahaman ini, developers dapat membangun aplikasi web yang responsif dengan mudah memanfaatkan Pyramid framework.
