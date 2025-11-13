@@ -46,19 +46,14 @@ assert 'expected html fragment' in response.text
 assert 'expected html fragment' in response.body.decode('utf-8')
 ```
 
-## Jawaban Extra Credit (singkat dan jelas)
+## Extra Credit
 
-- Jika Anda ubah assert menjadi `self.assertEqual(response.status_code, 404)` dan jalankan `pytest`, tes akan gagal. Laporan kegagalan (`AssertionError`) dari pytest akan menunjukkan file dan baris tes yang gagal serta nilai yang diharapkan vs nilai aktual (mis. expected 404 but was 200). Laporan ini membantu cepat menemukan kontrak yang dilanggar.
+- Jika mengubah assert menjadi `self.assertEqual(response.status_code, 404)` dan jalankan `pytest`, tes akan gagal. Laporan kegagalan (`AssertionError`) dari pytest akan menunjukkan file dan baris tes yang gagal serta nilai yang diharapkan vs nilai aktual (mis. expected 404 but was 200). Laporan ini membantu cepat menemukan kontrak yang dilanggar.
 
-- Jika Anda memasukkan bug di view (mis. referensi variabel yang tidak ada), menjalankan tes akan menunjukkan traceback yang jelas menunjuk ke lokasi error di kode view — ini sering lebih cepat daripada memuat ulang aplikasi di browser.
+- Jika memasukkan bug di view (mis. referensi variabel yang tidak ada), menjalankan tes akan menunjukkan traceback yang jelas menunjuk ke lokasi error di kode view — ini sering lebih cepat daripada memuat ulang aplikasi di browser.
 
 - Untuk mengubah kode agar view mengembalikan kode status tertentu, pelajari `pyramid.response.Response` / WebOb Response dan set `status` atau gunakan `Response(status=404)`.
 
-- Jawaban ringkas: kita meng-import `hello_world` di dalam `test_hello_world` agar setiap tes tetap terisolasi dan supaya efek samping import tidak memengaruhi setup tes lainnya. Import di dalam fungsi juga memudahkan manipulasi (monkeypatching) sebelum import bila diperlukan.
+- Kita meng-import `hello_world` di dalam `test_hello_world` agar setiap tes tetap terisolasi dan supaya efek samping import tidak memengaruhi setup tes lainnya. Import di dalam fungsi juga memudahkan manipulasi (monkeypatching) sebelum import bila diperlukan.
 
 ---
-
-Jika Anda ingin, saya bisa juga:
-- Menambahkan contoh assertion untuk isi HTML ke `tutorial/tests.py`.
-- Menjalankan `pytest` di lingkungan Anda (beri tahu bila ingin saya jalankan perintah di terminal).
-
